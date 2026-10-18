@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.5-blue)
+![version](https://img.shields.io/badge/version-1.2.6-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.2.6
+
+- **帧改成按需解码(解决点击卡顿)**:以前点一下动作要先把 241 帧全解成位图(卡 1 秒左右),
+  现在播放到哪帧解哪帧,前后各留 10 帧缓存:
+  - 点动作**立即开始**,不再有载入停顿
+  - 内存从 **330 MB 降到 123 MB**
+- **拖动不再卡**:拖动/弹跳这类高速移动时**每帧都重画**(原来「位置没变就不画」的逻辑会拖出跳帧)
+- **弹跳拖影**:移动过程中把跟随的信息面板收起来(它跟不上会像拖影);同时不再跳帧绘制
 
 ### v1.2.5
 
