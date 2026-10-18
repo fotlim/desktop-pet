@@ -1,0 +1,13 @@
+# 运行期文件(绝不进仓库)
+settings.json
+pet.log
+pet.log.old
+pet-weather.json
+run-hidden.vbs
+
+# 临时/测试
+*.tmp
+*.bak
+*~
+_build/
+preview-*.png
