@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.6-blue)
+![version](https://img.shields.io/badge/version-1.3.0-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.3.0
+
+**桌宠动画层按 dsh-pet 的方案重写**(功能一个没少:模型/配色、桌面图标互动、菜单、托盘、天气、表情包、自检)。
+
+| 模块 | dsh-pet 的做法 | 现在 |
+| --- | --- | --- |
+| 动画链 | 每段播完按权重选下一段,首尾相接 | ✅ 待机权重 20 / 溜达 4 / 各动作 1;待机播 1~3 轮(10~30 秒)后进链 |
+| 双缓冲交叉淡入 | 旧段冻结成第二缓冲,130ms 混过去 | ✅ `Blend()` 在预乘 BGRA 上做,无空白帧、无黑框 |
+| 脚底/画布统一 | 所有动画同一画布 | ✅ 318×200(早就是) |
+| 镜像朝向 | 全部动画可左右镜像 | ✅ 溜达/甩出按方向自动翻,镜像帧带缓存 |
+| 拖拽 | 过阻尼弹簧跟手 K=200 / C=30 | ✅ 宠物会略微滞后地追指针 |
+| 抛掷 | 轨迹窗口 + 峰值加权 + 死区 + 软上限 | ✅ 200ms 轨迹、150ms 窗口、峰值权重 0.5、死区 500px/s、上限 3600px/s |
+| Q 弹 | 点击/落地挤压 220ms,压到 55% | ✅ 落地按冲击速度 300→1500px/s 映射压深,点击固定 72% |
+| 物理 | gravity 1400 / restitution 0.78 / friction 2.5 | ✅ 一致,另加落地静止阈值 |
+
+**顺带修的两个底层问题**:
+
+- 帧现在以**预乘 alpha** 的 32bpp DIB 交给 `UpdateLayeredWindow`(以前是 GDI+ `GetHbitmap` 的直通 alpha),边缘混色终于是对的
+- 修了 `@($a * $k, $b * $k)` 的优先级坑 —— 逗号比乘法先结合,之前每次甩出去初速都算成 0
+
+实测:点击立即进入动作+Q 弹;拖动跟手有轻微滞后;甩出有抛物线、边缘反弹、落地 Q 弹;动画链 10 秒一段自然接续(日志 `宠物动作结束:涮火锅 实际 10 秒` → 下一段);稳态 23~24 fps;RSS 145→150 MB 平台期,90 秒内句柄/GDI 对象不增长。
 
 ### v1.2.6
 
