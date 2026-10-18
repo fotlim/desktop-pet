@@ -18,7 +18,7 @@ param(
 )
 
 $script:AppName   = '桌面宠物'
-$script:AppVersion = '1.2.6'
+$script:AppVersion = '1.2.7'
 $script:SelfScript = $MyInvocation.MyCommand.Path
 $script:AppDir     = Split-Path -Parent $script:SelfScript
 if (-not $script:AppDir) { $script:AppDir = (Get-Location).Path }
@@ -466,7 +466,7 @@ $script:PetSleepHits = 0
 $script:PetStateStamp = 0
 # 键鼠静止多少分钟就打盹
 $script:PetIdleSleepMin = 10
-# 桌面图标互动(吃掉 / 搬运 / 整理)
+# 桌面图标互动(吃掉 / 搬运)
 $script:IconDir = $script:AppDir
 $script:IconLv = [IntPtr]::Zero
 $script:IconEaten = @()
@@ -2199,10 +2199,6 @@ function New-PetMenu {
     $miIconCarry.Text = '搬运一个图标(随机位置)'
     $miIconCarry.add_Click({ try { [void](Invoke-IconManual -Kind 'carry') } catch { } })
     [void]$miIcons.DropDownItems.Add($miIconCarry)
-    $miIconTidy = New-Object System.Windows.Forms.ToolStripMenuItem
-    $miIconTidy.Text = '整理图标(随机一种排法)'
-    $miIconTidy.add_Click({ try { [void](Invoke-IconManual -Kind 'tidy') } catch { } })
-    [void]$miIcons.DropDownItems.Add($miIconTidy)
     [void]$miIcons.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
     $miIconAll = New-Object System.Windows.Forms.ToolStripMenuItem
     $miIconAll.Text = '立即还回被吃掉的图标'
@@ -2983,10 +2979,6 @@ function New-TrayMenu {
     $miIconCarry.Text = '搬运一个图标(随机位置)'
     $miIconCarry.add_Click({ try { [void](Invoke-IconManual -Kind 'carry') } catch { } })
     [void]$miIcons.DropDownItems.Add($miIconCarry)
-    $miIconTidy = New-Object System.Windows.Forms.ToolStripMenuItem
-    $miIconTidy.Text = '整理图标(随机一种排法)'
-    $miIconTidy.add_Click({ try { [void](Invoke-IconManual -Kind 'tidy') } catch { } })
-    [void]$miIcons.DropDownItems.Add($miIconTidy)
     [void]$miIcons.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
     $miIconAll = New-Object System.Windows.Forms.ToolStripMenuItem
     $miIconAll.Text = '立即还回被吃掉的图标'
@@ -3206,7 +3198,7 @@ function Invoke-Uninstall {
     return $true
 }
 
-# ================= 桌面图标互动(吃掉 / 搬运 / 整理) =================
+# ================= 桌面图标互动(吃掉 / 搬运) =================
 # 直接读写桌面 SysListView32 的图标位置(LVM_GETITEMPOSITION / LVM_SETITEMPOSITION),
 # 跨进程要用 VirtualAllocEx + Read/WriteProcessMemory。
 # 「自动排列图标」开着时位置会被 shell 弹回,所以动手前先测一下能不能挪:
@@ -3434,7 +3426,7 @@ function Enable-DesktopAutoArrangeOff {
         try {
             Add-Type -AssemblyName System.Windows.Forms
             $ans = [System.Windows.Forms.MessageBox]::Show(
-                '桌面的「自动排列图标」现在是开着的,吃掉/搬运/整理图标都动不了。' + "`r`n`r`n" +
+                '桌面的「自动排列图标」现在是开着的,吃掉/搬运图标都动不了。' + "`r`n`r`n" +
                 '要关掉它吗?会重启一次资源管理器(任务栏闪一下,打开的文件夹窗口会关掉),图标位置保留。',
                 '桌面宠物', 'YesNo', 'Question')
             if ($ans -ne 'Yes') { Write-Log '没关自动排列:图标互动这次跳过' 'WARN'; return $false }
@@ -3648,71 +3640,19 @@ function Invoke-IconCarry {
     try { Show-PetSaying } catch { }
     return $true
 }
-function Invoke-IconTidy {
-    # 整理 = 随机挑一种排法,按格子重排所有图标
-    param($Data)
-    $d = Get-DesktopIconList
-    if (-not $d -or $d.Icons.Count -lt 2) { return $false }
-    if (-not (Set-DesktopAutoArrangeOff -Data $d)) { return $false }
-    $d = Get-DesktopIconList
-    if (-not $d) { return $false }
-    $fileMap = Get-DesktopFileMap
-    $rows = foreach ($ic in $d.Icons) {
-        $f = $fileMap[[string]$ic.Name]
-        if (-not $f) { $base = [System.IO.Path]::GetFileNameWithoutExtension([string]$ic.Name); if ($base) { $f = $fileMap[$base] } }
-        [pscustomobject]@{
-            Index = $ic.Index; Name = $ic.Name
-            Time  = $(if ($f) { $f.LastWriteTime } else { [datetime]::MinValue })
-            Size  = $(if ($f) { $f.Length } else { 0 })
-        }
-    }
-    $rows = @($rows)
-    $methods = @('名称正序', '名称倒序', '时间正序', '时间倒序', '大小正序', '大小倒序')
-    $method = $methods[(Get-Random -Maximum $methods.Count)]
-    switch ($method) {
-        '名称正序' { $rows = @($rows | Sort-Object Name) }
-        '名称倒序' { $rows = @($rows | Sort-Object Name -Descending) }
-        '时间正序' { $rows = @($rows | Sort-Object Time, Name) }
-        '时间倒序' { $rows = @($rows | Sort-Object Time -Descending) }
-        '大小正序' { $rows = @($rows | Sort-Object Size, Name) }
-        '大小倒序' { $rows = @($rows | Sort-Object Size -Descending) }
-    }
-    $cw = [int]$d.Spacing[0]; $ch = [int]$d.Spacing[1]
-    $margin = 8
-    # 竖向排:先往下排满一列,再排右边一列
-    $cols = [Math]::Max(1, [int][Math]::Floor(($script:ScreenW - $margin) / $cw))
-    $rowsMax = [Math]::Max(1, [int][Math]::Floor(($script:ScreenH - $margin) / $ch))
-    for ($i = 0; $i -lt $rows.Count; $i++) {
-        $row = $i % $rowsMax
-        $col = [int][Math]::Floor($i / $rowsMax)
-        if ($col -ge $cols) { break }
-        $x = $margin + $col * $cw
-        $y = $margin + $row * $ch
-        [DeskPet.DeskIcons]::SetPos($d.Lv, $rows[$i].Index, $x, $y)
-    }
-    Write-Log ('图标互动:整理 ' + $rows.Count + ' 个图标,排法「' + $method + '」') 'OK'
-    try { Show-PetSaying } catch { }
-    return $true
-}
 
 function Invoke-IconManual {
-    # 菜单里手动触发:默认对「宠物下面那个图标」动手;整理则对全部图标
+    # 菜单里手动触发:对「宠物下面那个图标」动手
     param([string]$Kind)
     $hit = Get-DesktopIconNearPet
-    if (-not $hit -and $Kind -ne 'tidy') {
+    if (-not $hit) {
         Write-Log '宠物下面没有图标 —— 先把它拖到桌面图标上再点' 'WARN'
         return $false
-    }
-    if (-not $hit) {
-        $d = Get-DesktopIconList
-        if (-not $d) { Write-Log '读不到桌面图标列表' 'WARN'; return $false }
-        $hit = [pscustomobject]@{ Icon = $d.Icons[0]; Data = $d }
     }
     [void](Save-DesktopIconLayout -Data $hit.Data -Tag 'manual')
     switch ($Kind) {
         'eat' { return (Invoke-IconEat -Icon $hit.Icon -Data $hit.Data) }
         'carry' { return (Invoke-IconCarry -Icon $hit.Icon -Data $hit.Data) }
-        'tidy' { return (Invoke-IconTidy -Data $hit.Data) }
         'restore' { return ([bool](Restore-DesktopIconLayout)) }
         'all' { return ((Restore-EatenIcons -All) -gt 0) }
     }
@@ -3731,12 +3671,11 @@ function Invoke-IconEventNearPet {
     if (-not $hit) { return $false }
     [void](Save-DesktopIconLayout -Data $hit.Data -Tag 'touch')
     $script:IconEventAt = $now
-    $pick = @('eat', 'carry', 'tidy')[(Get-Random -Maximum 3)]
+    $pick = @('eat', 'carry')[(Get-Random -Maximum 2)]
     $ok = $false
     switch ($pick) {
         'eat' { $ok = Invoke-IconEat -Icon $hit.Icon -Data $hit.Data }
         'carry' { $ok = Invoke-IconCarry -Icon $hit.Icon -Data $hit.Data }
-        'tidy' { $ok = Invoke-IconTidy -Data $hit.Data }
     }
     return $ok
 }
