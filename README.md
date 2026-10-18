@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.4-blue)
+![version](https://img.shields.io/badge/version-1.2.5-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.2.5
+
+- **彻底去掉淡入**:切动作就是直接换帧(之前无论 6 帧还是 3 帧,都会出现「两副姿势叠着」的观感)。
+  「建帧时每 8 帧跑消息循环」保留,所以载入时画面不会定住
+- **吃掉图标只吃一个**:已经有一个被吃掉的没还回来时,不会再吃第二个(日志会写「已经吃掉一个图标了…」)
+- **图标互动不一定触发**:拖到图标上 45% 概率、溜达到图标上 25% 概率(之前是 100% / 60%),配合 45 秒冷却
+- **整理图标改成竖向排**:先往下排满一列再排下一列(之前是横向一行一行铺)
 
 ### v1.2.4
 
