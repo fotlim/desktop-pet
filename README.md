@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.3-blue)
+![version](https://img.shields.io/badge/version-1.2.4-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.2.4
+
+- **修:动作开始前会「缩一下」**。原因不是窗口缩放(实测全程 398×250),而是交叉淡入末尾:
+  待机剪影(高 184)和动作首帧剪影(高 169~182)叠在一起,最后那帧待机影像消失,剪影瞬间塌小。
+  - 淡入从 6 帧(250ms)缩到 **3 帧(125ms)**,并且动作帧更快占主导(alpha 从 0.4 起步),
+    两副姿势叠着的时间短到看不出
+  - 动作片头本身带下蹲/前倾的预备姿(源素材就这样),现在只剩这一段自然预备,不再有突兀的缩
 
 ### v1.2.3
 
