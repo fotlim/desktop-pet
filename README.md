@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.1-blue)
+![version](https://img.shields.io/badge/version-1.2.2-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.2.2
+
+- **点击动作到动画开始的过渡更顺了**:
+  - **交叉淡入**:切动作时用 6 帧(约 250ms)把「上一帧」和动作第一帧按比例混出来,不再「啪」一下换姿势;动作播完回待机也是淡入
+  - **载入不再定住画面**:建帧时每 8 帧跑一次消息循环(`DoEvents`),载入期间宠物继续保持待机动画,不会「卡一秒然后突然跳」
+  - 日志能看到过渡:`动作过渡:cat 交叉淡入 6 帧(250ms)` / `动作过渡:idle 交叉淡入 6 帧`
+  - 顺带修:淡入起点在建帧前先拷一份(建帧会释放旧缓存,直接拿句柄会 GDI+ 报错)
 
 ### v1.2.1
 
