@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.0-blue)
+![version](https://img.shields.io/badge/version-1.2.1-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.2.1
+
+- 24fps 整段素材一帧 250KB 上下,帧缓存从「最多 3 个动作」收紧到「当前动作 + idle 两个」:
+  托盘 RSS 从 **397 MB** 降到 **239 MB**(代价:遛达时 walk 帧要重建一次,约 0.5 秒)
 
 ### v1.2.0
 

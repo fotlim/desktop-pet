@@ -18,7 +18,7 @@ param(
 )
 
 $script:AppName   = '桌面宠物'
-$script:AppVersion = '1.2.0'
+$script:AppVersion = '1.2.1'
 $script:SelfScript = $MyInvocation.MyCommand.Path
 $script:AppDir     = Split-Path -Parent $script:SelfScript
 if (-not $script:AppDir) { $script:AppDir = (Get-Location).Path }
@@ -788,9 +788,10 @@ function Get-PetFrames {
 
     $entry = [pscustomobject]@{ Hbs = $hbs; W = $w; H = $h; Count = $hbs.Count; Fps = ($fps * $k) }
     $script:PetCache[$key] = $entry
-    if ($script:PetCache.Count -gt 3) {
+    # 24fps 整段动作一帧要 250KB 上下,缓存只留「当前动作 + idle」两个,免得吃几百 MB
+    if ($script:PetCache.Count -gt 2) {
         foreach ($k in @($script:PetCache.Keys)) {
-            if ($k -eq $key -or $k -like 'idle@*' -or $k -like 'walk@*') { continue }
+            if ($k -eq $key -or $k -like 'idle@*') { continue }
             foreach ($hb in $script:PetCache[$k].Hbs) { [DeskPet.Layered]::FreeHBitmap($hb) }
             $script:PetCache.Remove($k)
         }
