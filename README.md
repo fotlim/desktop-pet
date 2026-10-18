@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.2.2-blue)
+![version](https://img.shields.io/badge/version-1.2.3-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -155,6 +155,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.2.3
+
+- **修:动作淡入时会出现一块半透明黑框**。原因是淡入用的两张位图都是从 HBITMAP 转来的
+  (`Image.FromHbitmap`),GDI+ 会丢掉 alpha,透明区域变成黑底;两张一混就成了 50% 黑底铺满画布。
+  现在两边都改成**按当前缩放/配色/画布重新解码原 PNG**(`Get-PetFrameBitmap`),拿到的是真正的透明位图,
+  混合后四角 alpha 仍是 0(实测),黑框没了
+- 取不到起点帧时不再混帧,直接正常播放(不会再把整块画布画黑)
 
 ### v1.2.2
 
