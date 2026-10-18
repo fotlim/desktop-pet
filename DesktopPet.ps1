@@ -7,7 +7,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('run', 'pet', 'weather', 'install', 'uninstall', 'list', 'selftest')]
+    [ValidateSet('run', 'launch', 'pet', 'weather', 'install', 'uninstall', 'list', 'selftest')]
     [string]$Mode = 'run',
     [string]$Model = '',
     [string]$Variant = '',
@@ -18,7 +18,7 @@ param(
 )
 
 $script:AppName   = '桌面宠物'
-$script:AppVersion = '1.1.0'
+$script:AppVersion = '1.1.1'
 $script:SelfScript = $MyInvocation.MyCommand.Path
 $script:AppDir     = Split-Path -Parent $script:SelfScript
 if (-not $script:AppDir) { $script:AppDir = (Get-Location).Path }
@@ -2863,7 +2863,7 @@ function New-TrayMenu {
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
     $miExit = New-Object System.Windows.Forms.ToolStripMenuItem
-    $miExit.Text = '退出'
+    $miExit.Text = '退出(关掉托盘和桌宠)'
     $miExit.add_Click({
             try { Stop-Pet -Remember:$false } catch { }
             if ($script:TrayNotify) { $script:TrayNotify.Visible = $false; $script:TrayNotify.Dispose() }
@@ -2987,6 +2987,48 @@ function Invoke-Uninstall {
     }
     if (Test-Path $script:VbsFile) { Remove-Item $script:VbsFile -Force -ErrorAction SilentlyContinue }
     return $true
+}
+
+# ================= 控制台 / 后台进程探测 =================
+function Get-ConsoleWindowHandle {
+    # 有没有一个「看得见的」控制台窗口(隐藏进程里也挂着控制台,所以必须看可见性)
+    if (-not ('DeskPet.Win32' -as [type])) {
+        try {
+            $cs = @'
+using System;
+using System.Runtime.InteropServices;
+namespace DeskPet {
+    public static class Win32 {
+        [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+        [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    }
+}
+'@
+            Add-Type -TypeDefinition $cs -Language CSharp
+        } catch { }
+    }
+    try {
+        $h = [DeskPet.Win32]::GetConsoleWindow()
+        if ($h -eq [IntPtr]::Zero) { return [IntPtr]::Zero }
+        if (-not [DeskPet.Win32]::IsWindowVisible($h)) { return [IntPtr]::Zero }
+        return $h
+    } catch { return [IntPtr]::Zero }
+}
+
+function Get-PetAppProcess {
+    # 已经在跑的「托盘 + 桌宠」本体(-Mode run,隐藏进程)
+    foreach ($p in (Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue)) {
+        if ($p.ProcessId -ne $PID -and $p.CommandLine -match 'DesktopPet\.ps1' -and $p.CommandLine -match '\-Mode\s+run\b') {
+            return $p
+        }
+    }
+    return $null
+}
+
+function Start-DetachedPet {
+    # 起一个隐藏的后台本体;控制台只是启动器,关掉不影响它
+    return (Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -PassThru -ArgumentList (
+            '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}" -Mode run -Background' -f $script:SelfScript))
 }
 
 # ================= 主流程 =================
@@ -3135,6 +3177,23 @@ switch ($Mode) {
         exit 1
     }
 
+    'launch' {
+        # 双击 start.bat 用的入口:本体起成一个隐藏进程,这个窗口只是「启动器」,
+        # 关掉它不会连带关掉宠物(Windows 关控制台 = 直接杀进程,拦不住,所以只能分进程)
+        if (Get-PetAppProcess) {
+            Write-Log ('桌面宠物已经在托盘里运行了(右下角「宠」图标),不用重复启动') 'OK'
+        } else {
+            $null = Start-DetachedPet
+            Start-Sleep -Milliseconds 1600
+            Write-Log ('已启动:托盘图标 + 桌宠   日志:' + $script:LogFile) 'OK'
+        }
+        Write-Log ''
+        Write-Log '  右键右下角「宠」图标:切换模型 / 显示或隐藏宠物 / 开机自启 / 退出'
+        Write-Log '  关掉这个窗口不影响宠物运行(本体在后台,由托盘图标控制)'
+        Write-Log ''
+        exit 0
+    }
+
     'pet' {
         if (-not (Start-Pet)) { exit 1 }
         $s = Get-Settings
@@ -3147,6 +3206,19 @@ switch ($Mode) {
     }
 
     default {
+        # 直接运行脚本(控制台里)时:先把自己转成一个隐藏的后台进程,再退出控制台。
+        # 否则用户点控制台右上角 ✕,Windows 直接把进程杀掉,宠物和托盘一起没 ——
+        # 关控制台这个事件是拦不住的(控制台窗口归 conhost/终端所有,进程里收不到可取消的通知)。
+        if (-not $Background -and -not $NoTray -and (Get-ConsoleWindowHandle) -ne [IntPtr]::Zero) {
+            if (Get-PetAppProcess) {
+                Write-Log '桌面宠物已经在托盘里运行了(右下角「宠」图标)' 'OK'
+            } else {
+                $null = Start-DetachedPet
+                Start-Sleep -Milliseconds 1400
+                Write-Log '桌面宠物已转到托盘运行(右下角「宠」图标),这个窗口可以关掉' 'OK'
+            }
+            exit 0
+        }
         if ($NoTray) {
             if (-not (Start-Pet)) { exit 1 }
             [System.Windows.Forms.Application]::Run()

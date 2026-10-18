@@ -1,6 +1,6 @@
 # 桌面宠物 DesktopPet
 
-![version](https://img.shields.io/badge/version-1.1.0-blue)
+![version](https://img.shields.io/badge/version-1.1.1-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![powershell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 
@@ -21,7 +21,10 @@
 1. 下载 [Releases](https://github.com/fotlim/desktop-pet/releases) 里的 zip,解压到任意目录(别放在 `C:\Program Files` 这种要管理员权限的地方)
 2. 双击 **`start.bat`**
 
-右下角出现一个「宠」字图标,桌面上出现小女仆。**右键宠物**是全部设置;**右键托盘图标**可以换模型、开/关宠物、装开机自启。
+右下角出现一个「宠」字图标,桌面上出现小女仆。**右键宠物**是全部设置;**右键托盘图标**可以换模型、开/关宠物、装开机自启、退出。
+
+**那个控制台窗口只是启动器**:真正的宠物和托盘跑在后台隐藏进程里,**关掉控制台(点 ✕)不会退出**,宠物继续待在托盘里;
+要退出请**右键「宠」图标 → 退出(关掉托盘和桌宠)**。(Windows 关控制台 = 直接杀进程、拦不住,所以把本体拆成了独立后台进程。)
 
 想要开机自动出现:
 
@@ -51,7 +54,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 | 天气 | 按 IP 定位(ip-api)→ 区县名细化(Open-Meteo / Nominatim);可选填彩云天气 token 拿分钟级天气 |
 | 模型 | 菜单第一项就是「模型」,见下 |
 | 大小 | 60% / 80% / 100% / 125% / 150% / 200%,立即生效 |
-| 托盘 | 单实例;双击托盘 = 打开宠物菜单;可开/关宠物、装开机自启、看日志 |
+| 托盘 | 单实例;**关掉控制台窗口也不会退出**(本体是独立后台进程);双击托盘 = 打开宠物菜单;右键可开/关宠物、装开机自启、看日志、**退出** |
 
 ---
 
@@ -111,7 +114,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 
 | 参数 | 作用 |
 | --- | --- |
-| (无) | 启动托盘 + 宠物(单实例,重复启动不会多开) |
+| (无) | 启动托盘 + 宠物(单实例,重复启动不会多开);**检测到控制台会自动转成后台进程**,所以关控制台不影响运行 |
+| `-Mode launch` | 启动器模式(`start.bat` 用的就是这个):拉起后台本体后退出,控制台只显示提示 |
 | `-Mode pet` | 只跑宠物,不要托盘(调试/预览用) |
 | `-Mode list` | 列出 `models/` 里的模型与配色 |
 | `-Mode selftest` | 自检:模型列表 / 菜单勾选 / 配色矩阵 / 切换落盘,不发窗口也能跑 |
@@ -150,6 +154,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\DesktopPet.ps1 -Mode insta
 ---
 
 ## 更新日志
+
+### v1.1.1
+
+- **关掉控制台不再退出程序**:原来 `start.bat` 直接把宠物跑在控制台进程里,点 ✕ 关窗口 = 进程被杀,宠物和托盘一起没
+  - 现在 `start.bat` 走 `-Mode launch`:先拉起一个**隐藏的后台本体**(`-Mode run -Background`),控制台只显示提示,关掉它不影响宠物
+  - 直接在控制台里跑 `DesktopPet.ps1` 也一样:检测到可见控制台就**自己转后台**再退出控制台(实测控制台进程立刻结束,后台进程照跑)
+  - 实测后台进程 `MainWindowHandle = 0`(没有挂在可见控制台上),所以关任何控制台窗口都杀不到它
+- **托盘右键的退出项**改成 `退出(关掉托盘和桌宠)`,不会留孤儿进程
+- `start.bat` 无参数时:`启动 → 显示提示 → 等你按任意键`,按 ✕ 关掉也只是关掉这个窗口
 
 ### v1.1.0
 
